@@ -14,6 +14,8 @@ export default function App() {
   const [database, setDatabase] = useState<DatabaseType>(DatabaseType.SQL_SERVER);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState(import.meta.env.VITE_GEMINI_API_KEY || '');
+  const [showApiKeyInput, setShowApiKeyInput] = useState(!import.meta.env.VITE_GEMINI_API_KEY);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = event.target.files;
@@ -55,7 +57,7 @@ export default function App() {
     setIsProcessing(true);
     setError(null);
     try {
-      const markdown = await performRequirementAnalysis(combinedContent, architecture, orientation, database);
+      const markdown = await performRequirementAnalysis(combinedContent, architecture, orientation, database, apiKey);
       setResult({
         markdown,
         timestamp: new Date().toLocaleString(),
@@ -92,7 +94,7 @@ export default function App() {
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+
         {/* Left Panel: Configuration */}
         <div className="lg:col-span-4 space-y-6">
           <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -101,10 +103,10 @@ export default function App() {
               1. 匯入需求文件
             </h2>
             <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 hover:border-indigo-400 transition-colors cursor-pointer relative">
-              <input 
-                type="file" 
-                multiple 
-                accept=".docx,.pdf,.pptx,.xlsx,.xls" 
+              <input
+                type="file"
+                multiple
+                accept=".docx,.pdf,.pptx,.xlsx,.xls"
                 className="absolute inset-0 opacity-0 cursor-pointer"
                 onChange={handleFileUpload}
               />
@@ -126,7 +128,7 @@ export default function App() {
                     <div className="flex items-center space-x-2">
                       {file.status === 'pending' && <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />}
                       {file.status === 'completed' && <CheckCircle className="w-4 h-4 text-green-500" />}
-                      <button 
+                      <button
                         onClick={() => removeFile(file.id)}
                         className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
@@ -144,19 +146,19 @@ export default function App() {
               <Settings className="w-5 h-5 text-indigo-500" />
               2. 分析設定
             </h2>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">目標系統架構</label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button 
+                  <button
                     onClick={() => setArchitecture(ArchitectureType.BS)}
                     className={`flex flex-col items-center justify-center p-3 rounded-lg border text-xs transition-all ${architecture === ArchitectureType.BS ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-medium' : 'border-slate-200 hover:border-slate-300 text-slate-600'}`}
                   >
                     <Layout className="w-5 h-5 mb-1" />
                     <span>B/S</span>
                   </button>
-                  <button 
+                  <button
                     onClick={() => setArchitecture(ArchitectureType.CS)}
                     className={`flex flex-col items-center justify-center p-3 rounded-lg border text-xs transition-all ${architecture === ArchitectureType.CS ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-medium' : 'border-slate-200 hover:border-slate-300 text-slate-600'}`}
                   >
@@ -169,21 +171,21 @@ export default function App() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">後端資料庫</label>
                 <div className="grid grid-cols-3 gap-2">
-                  <button 
+                  <button
                     onClick={() => setDatabase(DatabaseType.SQL_SERVER)}
                     className={`flex flex-col items-center justify-center p-2 rounded-lg border text-[10px] leading-tight transition-all ${database === DatabaseType.SQL_SERVER ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold' : 'border-slate-200 hover:border-slate-300 text-slate-600'}`}
                   >
                     <Database className="w-4 h-4 mb-1" />
                     <span className="text-center">SQL Server</span>
                   </button>
-                  <button 
+                  <button
                     onClick={() => setDatabase(DatabaseType.ORACLE)}
                     className={`flex flex-col items-center justify-center p-2 rounded-lg border text-[10px] leading-tight transition-all ${database === DatabaseType.ORACLE ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold' : 'border-slate-200 hover:border-slate-300 text-slate-600'}`}
                   >
                     <Database className="w-4 h-4 mb-1" />
                     <span className="text-center">Oracle</span>
                   </button>
-                  <button 
+                  <button
                     onClick={() => setDatabase(DatabaseType.POSTGRESQL)}
                     className={`flex flex-col items-center justify-center p-2 rounded-lg border text-[10px] leading-tight transition-all ${database === DatabaseType.POSTGRESQL ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold' : 'border-slate-200 hover:border-slate-300 text-slate-600'}`}
                   >
@@ -195,7 +197,7 @@ export default function App() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">分析導向</label>
-                <select 
+                <select
                   value={orientation}
                   onChange={(e) => setOrientation(e.target.value as AnalysisOrientation)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -205,7 +207,32 @@ export default function App() {
                 </select>
               </div>
 
-              <button 
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-slate-700">Gemini API Key</label>
+                  <button
+                    onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+                    className="text-[10px] text-indigo-600 hover:underline"
+                  >
+                    {showApiKeyInput ? '隱藏' : '修改'}
+                  </button>
+                </div>
+                {showApiKeyInput ? (
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="輸入您的 API Key..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                ) : (
+                  <div className="text-xs text-slate-400 italic bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
+                    已從系統讀取標記
+                  </div>
+                )}
+              </div>
+
+              <button
                 onClick={handleStartAnalysis}
                 disabled={isProcessing || files.filter(f => f.status === 'completed').length === 0}
                 className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 transition-all shadow-md active:scale-[0.98]"
@@ -244,7 +271,7 @@ export default function App() {
                   </p>
                 </div>
                 <div className="flex items-center space-x-2 shrink-0">
-                  <button 
+                  <button
                     onClick={() => downloadAsDocx(result.markdown, `Requirement_Analysis_${Date.now()}`)}
                     className="flex items-center space-x-1 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded hover:bg-indigo-700 transition-colors shadow-sm"
                   >

@@ -1,20 +1,52 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 需求分析專家 (RAE)
 
-# Run and deploy your AI Studio app
+這是一個基於 React 與 Gemini AI 的需求分析應用程式。
 
-This contains everything you need to run your app locally.
+## 本地開發 (Run Locally)
 
-View your app in AI Studio: https://ai.studio/apps/drive/1v68y9d_COVFVM5s4LFnkHOOo8umTM4mE
+**前置作業:** Node.js
 
-## Run Locally
+1. **安裝套件:**
 
-**Prerequisites:**  Node.js
+   ```bash
+   npm install
+   ```
 
+2. **設定環境變數:**
+   在根目錄新增 `.env.local` 並設定 `VITE_GEMINI_API_KEY`:
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   VITE_GEMINI_API_KEY=your_gemini_api_key_here
+   ```
+
+3. **啟動開發伺服器:**
+
+   ```bash
+   npm run dev
+   ```
+
+## 部署 (Deployment)
+
+本專案已設定 GitHub Actions，當推送到 `main` 分支時會自動部署到 GitHub Pages。
+
+### 自動部署
+
+1. 將程式碼推送到 GitHub `main` 分支。
+2. 前往 GitHub Repo 的 `Settings > Pages`。
+3. 在 `Build and deployment > Source` 選擇 `GitHub Actions`。
+
+### 手動建置
+
+若需手動建置，請執行：
+
+```bash
+npm run build
+```
+
+產出的檔案將位於 `dist` 資料夾。
+
+## 專案結構
+
+- `App.tsx`: 主要應用程式邏輯
+- `services/`: AI 與資料處理服務
+- `types.ts`: TypeScript 型別定義
