@@ -1,0 +1,5 @@
+{
+  "name": "需求分析專家 (RAE)",
+  "description": "A professional tool for software requirement analysis, converting diverse documents (PDF, DOCX) into structured SRS documents with C/S and B/S .NET architectures, focusing on requirement-analysis and problem-solution orientations.",
+  "requestFramePermissions": []
+}
