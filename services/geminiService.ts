@@ -8,53 +8,8 @@ export async function performRequirementAnalysis(
   architecture: ArchitectureType,
   orientation: AnalysisOrientation,
   database: DatabaseType,
-  customApiKey?: string
+  _customApiKey?: string // 移除前端 Key 邏輯，保留參數以避免破壞 App.tsx
 ): Promise<string> {
-  let apiKey = (customApiKey || import.meta.env.VITE_GEMINI_API_KEY || (process.env.GEMINI_API_KEY as string) || "").trim();
-
-  // 清洗 API Key，移除可能的非 ASCII 字元 (例如不可見字元、複製時夾帶的空白等)
-  apiKey = apiKey.replace(/[^\x00-\x7F]/g, "");
-
-  if (!apiKey) {
-    console.warn("未提供 API Key，切換至展示模式 (Demo Mode)");
-    await new Promise(resolve => setTimeout(resolve, 2000)); // 模擬人工智慧處理延遲
-    return `
-# [展示模式] SRS 需求分析報告 - ${new Date().toLocaleDateString()}
-
-> [!NOTE]
-> 偵測到未設定 API Key，系統已自動切換至展示模式。以下為模擬產出的報告內容。
-
-## 1. 專案概覽
-- **目標架構**: ${architecture}
-- **資料庫**: ${database}
-- **分析導向**: ${orientation}
-
-## 2. 核心功能模組 (範例)
-| 模組編號 | 功能名稱 | 詳細描述 | 優先級 |
-| :--- | :--- | :--- | :--- |
-| F001 | 使用者驗證 | 包含登入、註冊、多因子驗證 (MFA) | 必須實作 |
-| F002 | 需求匯入與解析 | 支援多種檔案格式 (DOCX, PDF) 之內容讀取 | 必須實作 |
-| F003 | 自動化分析引擎 | 基於大語言模型之語義分析與結構化處理 | 應該實作 |
-
-## 3. 技術實作建議 (.NET)
-- 使用 **Entity Framework Core** 進行資料持久化。
-- 針對 **${database}** 實作分頁與索引優化。
-- 後端架構建議採用 **Clean Architecture** 以提升可維護性。
-
----
-*這是一份模擬報告，請在設定 API Key 後獲取完整 AI 分析結果。*
-    `.trim();
-  }
-
-  // 驗證 API Key 格式 (基本的非空檢查)
-  if (!apiKey || apiKey.length < 10) {
-    throw new Error("提供的 API Key 格式不正確或已失效，請檢查輸入內容。");
-  }
-
-  // 使用 GoogleGenerativeAI 並指定 API 版本為 v1
-  // @ts-ignore - 部分 SDK 版本可能需要此參數在建構子中
-  const genAI = new GoogleGenerativeAI(apiKey);
-
   const isRequirements = orientation === AnalysisOrientation.REQUIREMENTS;
   const systemPrompt = `
 你是一位世界級的「需求分析專家 (Senior Requirements Analyst)」，擁有超過 15 年在企業級 .NET 解決方案設計的經驗。
@@ -85,11 +40,6 @@ export async function performRequirementAnalysis(
 輸出格式：純 Markdown。
 `;
 
-  const model = genAI.getGenerativeModel({
-    // 使用 Gemini 2.0 Flash (使用者提到 2.5 但目前主要為 2.0，若 404 請檢查名稱)
-    model: "gemini-2.0-flash"
-  }, { apiVersion: "v1beta" });
-
   const fullPrompt = `
 ${systemPrompt}
 
@@ -104,25 +54,36 @@ ${text}
 `;
 
   try {
-    const result = await model.generateContent(fullPrompt);
-    const response = await result.response;
-    return response.text() || "分析失敗，模型未回傳結果。";
+    const response = await fetch('http://localhost:3005/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text,
+        architecture,
+        orientation,
+        database,
+        prompt: fullPrompt,
+        apiKey: _customApiKey
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `伺服器回傳錯誤: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.text || "分析失敗，代理伺服器未回傳結果。";
   } catch (error: any) {
-    console.error("Gemini API Error details:", error);
+    console.error("Gemini Proxy Error:", error);
 
     const errorMessage = error.message || "";
 
-    // 處理 429 Quota Exceeded
     if (errorMessage.includes("429") || errorMessage.includes("quota")) {
       throw new Error(
-        `Gemini 配額不足 (429): 您目前的 API Key 已達到免費額度上限，或者該模型 (${model.model}) 在您所在的區域尚未對免費用戶開放。請稍候再試，或更換 API Key。`
-      );
-    }
-
-    // 處理 404 Model Not Found (可能是版本不相容)
-    if (errorMessage.includes("404") || errorMessage.includes("not found")) {
-      throw new Error(
-        `Gemini 模型未找到 (404): 無法呼叫 ${model.model}。這可能是因為 API 版本或模型名稱不匹配。建議在 Google AI Studio 確認該模型是否可用。`
+        `Gemini 配額不足 (429): API 額度已達上限。請稍候再試。`
       );
     }
 

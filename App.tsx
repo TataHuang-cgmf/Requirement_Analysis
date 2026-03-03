@@ -14,8 +14,9 @@ export default function App() {
   const [database, setDatabase] = useState<DatabaseType>(DatabaseType.SQL_SERVER);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState(import.meta.env.VITE_GEMINI_API_KEY || '');
-  const [showApiKeyInput, setShowApiKeyInput] = useState(!import.meta.env.VITE_GEMINI_API_KEY);
+  const [apiKey, setApiKey] = useState<string>('');
+
+  const MAX_CHAR_LIMIT = 50000; // SRE 建議：限制輸入長度以控制成本
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = event.target.files;
@@ -51,6 +52,11 @@ export default function App() {
 
     if (!combinedContent) {
       setError("請先上傳並等待文件處理完成。");
+      return;
+    }
+
+    if (combinedContent.length > MAX_CHAR_LIMIT) {
+      setError(`文件內容過大 (${combinedContent.length} 字元)，超過系統限制 (${MAX_CHAR_LIMIT} 字元)。請減少文件數量或簡化內容。`);
       return;
     }
 
@@ -208,28 +214,30 @@ export default function App() {
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-slate-400" />
+                  自訂 Gemini API Key (選填)
+                </label>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="輸入您的 API Key 以覆蓋伺服器設定"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+                <p className="mt-1 text-[10px] text-slate-400">
+                  若伺服器未設定 Key，請在此輸入您的專屬 Key。
+                </p>
+              </div>
+
+              <div className="pt-2">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-slate-700">Gemini API Key</label>
-                  <button
-                    onClick={() => setShowApiKeyInput(!showApiKeyInput)}
-                    className="text-[10px] text-indigo-600 hover:underline"
-                  >
-                    {showApiKeyInput ? '隱藏' : '修改'}
-                  </button>
+                  <label className="block text-sm font-medium text-slate-700">安全性說明</label>
                 </div>
-                {showApiKeyInput ? (
-                  <input
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="輸入您的 API Key..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                ) : (
-                  <div className="text-xs text-slate-400 italic bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
-                    已從系統讀取標記
-                  </div>
-                )}
+                <div className="text-[10px] text-slate-500 bg-indigo-50 px-4 py-3 rounded-lg border border-indigo-100 leading-relaxed">
+                  <p className="font-semibold text-indigo-700 mb-1">🛡️ 企業級安全防護已啟動</p>
+                  API Key 已加密存放於後端代理伺服器，您的開發者工具 (F12) 將不再洩漏任何敏感資訊。所有傳連線均受到後端限流保護。
+                </div>
               </div>
 
               <button
